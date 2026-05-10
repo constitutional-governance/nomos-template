@@ -1,0 +1,28 @@
+# Nomos — shared governance server
+#
+# Usage:
+#   export GOVERNANCE_REPO_URL=https://github.com/your-org/your-governance-repo
+#   export GITHUB_TOKEN=ghp_...
+#   docker compose up -d
+#
+# See DEPLOYMENT.md for full setup instructions.
+
+services:
+  nomos:
+    image: ghcr.io/your-org/nomos:latest   # TODO: replace with published image
+    ports:
+      - "8080:8080"
+    environment:
+      GOVERNANCE_MODE: github
+      GOVERNANCE_REPO_URL: ${GOVERNANCE_REPO_URL}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_BRANCH: ${GITHUB_BRANCH:-main}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-300}
+      MCP_SERVER_HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

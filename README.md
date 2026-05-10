@@ -181,16 +181,22 @@ jobs:
 
 ## Deploying a shared server (the delegation model)
 
-The platform team deploys **one** Nomos instance. All teams point their agents and hooks at it — nobody runs their own.
+The platform team deploys **one** Nomos instance. Every team, agent, and pipeline delegates to it — nobody runs their own copy.
 
 ```bash
-# GitHub mode — governance repo on GitHub, server reads it directly
+# Quick start — GitHub mode
 export GOVERNANCE_REPO_URL=https://github.com/your-org/my-governance
 export GITHUB_TOKEN=ghp_...
-docker compose up -d   # docker-compose.yml is in the nomos package repo
+docker compose up -d
 ```
 
-Teams configure their AI agents (one line per project):
+```bash
+# Verify
+curl http://your-server:8080/health
+# → {"status": "ok"}
+```
+
+Teams connect their agents by adding `.mcp.json` to each project repo:
 
 ```json
 {
@@ -203,11 +209,9 @@ Teams configure their AI agents (one line per project):
 }
 ```
 
-Pre-commit hooks validate without local files:
+→ **Full setup guide: [DEPLOYMENT.md](DEPLOYMENT.md)**
 
-```bash
-nomos-validate --server https://governance.yourcompany.com topic your.topic.name.v1
-```
+Covers: platform deployment (process or Docker), GitHub webhook for live rule propagation, per-team agent configuration, pre-commit hooks, and CI integration.
 
 ---
 
