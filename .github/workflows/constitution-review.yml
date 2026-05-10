@@ -1,0 +1,46 @@
+name: Constitution contradiction check
+
+on:
+  pull_request:
+    paths:
+      - 'teams/*/constitutions/**.md'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check:
+    name: Check team addenda for contradictions
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Get changed constitution files
+        id: changed
+        run: |
+          FILES=$(git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.sha }}" \
+            -- 'teams/*/constitutions/*.md' \
+            | tr '\n' ' ')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Run contradiction check
+        if: steps.changed.outputs.files != ''
+        run: python .github/scripts/check_constitution.py ${{ steps.changed.outputs.files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        continue-on-error: true
+        # continue-on-error: the check posts a comment and exits 1 on BLOCKER,
+        # but never prevents merge — the domain owner has the final say.
