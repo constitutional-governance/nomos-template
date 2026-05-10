@@ -1,54 +1,31 @@
 # Nomos governance configuration
-# This file drives all validators. Edit it to match your platform's conventions.
+# This file drives all built-in validators.
 # Full reference: https://github.com/your-org/nomos
 
 project:
-  name: "My Platform Governance"       # TODO: replace with your organization name
-  description: "Platform governance"   # TODO: replace with a short description
+  name: "My Platform Governance"       # TODO: replace
+  description: "Platform governance"   # TODO: replace
 
 # ── Kafka domain ───────────────────────────────────────────────────────────────
-# Remove this section if your platform does not use Kafka.
-kafka:
-  topic:
-    segment_count: 7                  # TODO: set your required segment count
-    prefixes:
-      - raw                           # TODO: replace with your valid prefixes
-      - public
-      - ready
-      - private
-      - dev
-    non_production_prefixes:
-      - dev
-    max_length: 249
+# Only needed if you use Kafka. Remove this section otherwise.
+# These values drive validate_topic_name(), validate_rbac_binding(), validate_sa_name().
+#
+# kafka:
+#   topic:
+#     segment_count: 7
+#     prefixes: [raw, public, ready, private, dev]
+#     non_production_prefixes: [dev]
+#     max_length: 249
+#   rbac:
+#     valid_roles: [DeveloperRead, DeveloperWrite, ResourceOwner, DeveloperManage]
+#     valid_resource_types: [topic, group, cluster]
+#     admin_roles: [DeveloperManage]
+#     admin_resource_types: [cluster]
+#     cluster_resource_name: kafka-cluster
+#   service_account:
+#     prefix: "sa-"
+#     valid_envs: [dev, staging, prod]
+#     connector_directions: [source, sink]
+#     debug_suffix: "debug"
 
-  rbac:
-    valid_roles:
-      - DeveloperRead                 # TODO: replace with your RBAC role names
-      - DeveloperWrite
-      - ResourceOwner
-      - DeveloperManage
-    valid_resource_types:
-      - topic
-      - group
-      - cluster
-    admin_roles:
-      - DeveloperManage
-    admin_resource_types:
-      - cluster
-    cluster_resource_name: kafka-cluster
-
-  service_account:
-    prefix: "sa-"                     # TODO: set your SA prefix
-    valid_envs:
-      - dev                           # TODO: set your environment names
-      - staging
-      - prod
-    connector_directions:
-      - source
-      - sink
-    debug_suffix: "debug"
-
-# ── Add more domains here ──────────────────────────────────────────────────────
-# camel:
-#   base_class: "com.yourorg.camel.BaseRouteBuilder"
-#   parent_bom: "com.yourorg:camel-starter-parent:3.7.2"
+# See examples/kafka/governance.yml for a complete Kafka configuration.

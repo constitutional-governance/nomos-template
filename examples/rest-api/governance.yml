@@ -1,0 +1,9 @@
+project:
+  name: "REST API Governance"
+  description: "Governance for REST API platform"
+
+# REST API governance is enforced primarily through Gherkin checks
+# and OpenAPI spec linting — not through governance.yml validators.
+# The governance.yml here tracks project metadata only.
+#
+# Add custom config sections if you build validators for your API rules.

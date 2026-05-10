@@ -2,102 +2,195 @@
 
 > Governance repository template for [Nomos](https://github.com/your-org/nomos) — the [Constitutional Governance](https://github.com/your-org/constitutional-governance) reference implementation.
 
-Fork or use this template to create your organization's governance repository. It contains the structure Nomos expects: a constitution, ADRs, naming conventions, and executable Gherkin checks.
-
-**The server is not here.** This repo is governance content only. Nomos is a separate package:
+This repo is **governance content only** — constitutions, ADRs, naming conventions, and executable Gherkin checks. The server is a separate package:
 
 ```bash
 pip install nomos
-nomos --repo /path/to/this-repo
+nomos --repo .
 ```
 
 ---
 
-## What's in this template
-
-```
-nomos-template/
-├── governance.yml          ← your platform's rules — the main file to edit
-├── constitution.md         ← platform-wide principles
-├── constitutions/          ← per-domain constitutions
-├── adrs/global/            ← Architecture Decision Records
-├── features/               ← Gherkin checks (@enforced runs in CI)
-│   └── example/            ← starter example — replace with your domain
-└── examples/               ← complete reference implementations
-    ├── kafka/              ← full Kafka governance (copy and adapt)
-    └── rest-api/           ← REST API governance (copy and adapt)
-```
-
----
-
-## Getting started
+## Five-minute start
 
 ```bash
-# 1. Use this repo as a GitHub template (click "Use this template")
-#    or clone it:
+# 1. Clone or use this repo as a GitHub template
 git clone https://github.com/your-org/nomos-template my-governance
 cd my-governance
 
 # 2. Install Nomos
 pip install nomos
 
-# 3. Edit governance.yml with your platform's conventions
-
-# 4. Start the server
+# 3. Start the server — it reads this repo as-is
 nomos --repo .
+# → listening on http://127.0.0.1:8080
 
-# 5. Connect your AI agent (.mcp.json in any project):
-# {"mcpServers": {"nomos": {"type": "http", "url": "http://localhost:8080/mcp"}}}
+# 4. Connect Claude Code (or any MCP-compatible agent)
+# Add .mcp.json to your project:
+echo '{"mcpServers":{"nomos":{"type":"http","url":"http://127.0.0.1:8080/mcp"}}}' > .mcp.json
 ```
+
+The server works immediately with the template content. Customize it to make it yours.
 
 ---
 
-## Adopting the template
+## What's here and what to do with it
 
-### 1. Edit `governance.yml`
+```
+nomos-template/
+├── governance.yml          ← EDIT: your platform's validation rules
+├── constitution.md         ← EDIT: your platform-wide principles
+├── constitutions/
+│   └── example.md          ← RENAME + EDIT: one file per domain
+├── adrs/global/
+│   └── 001-resource-naming.md  ← REPLACE: your first architectural decision
+├── features/
+│   ├── example/
+│   │   └── resource-naming.feature  ← REPLACE: your first Gherkin check
+│   └── steps/
+│       └── README.md       ← READ: how to write step definitions
+└── examples/               ← REFERENCE: copy and adapt, do not edit directly
+    ├── kafka/              ← complete Kafka platform governance
+    └── rest-api/           ← complete REST API governance
+```
 
-This is the only file that drives validators. Replace the example values with your platform's conventions. Remove sections for domains you don't use.
+**The short version:** edit the files at the root level. Use `examples/` as reference. Delete placeholder files once you've replaced them.
 
-### 2. Write your constitution
+---
 
-Replace `constitution.md` with your platform's non-negotiable principles. Add per-domain constitutions in `constitutions/<domain>.md`.
+## Adopting the template step by step
 
-### 3. Record architectural decisions
+### Step 1 — Edit `governance.yml`
 
-Add ADRs in `adrs/global/`. Use ADR-001 as a template. Every naming convention should have a corresponding ADR explaining why it exists.
+This file drives the built-in validators (`validate_topic_name`, `validate_rbac_binding`, `validate_sa_name`).
 
-### 4. Write executable checks
+Uncomment the sections for the platforms you use. Remove sections you don't need. If you don't use Kafka, the file can be minimal:
 
-Add Gherkin feature files in `features/<your-domain>/`. Mark scenarios as `@enforced` when you have step definitions; `@wip` for documented aspirations.
+```yaml
+project:
+  name: "Acme Platform Governance"
+  description: "Governance for the Acme engineering platform"
+```
 
-Start from the example in `features/example/` or copy a complete example from `examples/`.
+See `examples/kafka/governance.yml` for a complete Kafka configuration.
 
-### 5. Run in CI
+### Step 2 — Write your constitution
+
+Replace `constitution.md` with your platform's non-negotiable principles — the rules that apply everywhere, regardless of team or domain.
+
+Add per-domain constitutions in `constitutions/`:
+
+```bash
+cp constitutions/example.md constitutions/kafka.md
+# Edit constitutions/kafka.md
+rm constitutions/example.md
+```
+
+### Step 3 — Record your first ADR
+
+Replace `adrs/global/001-resource-naming.md` with your first real architectural decision. Every naming convention should have an ADR explaining why it exists.
+
+The ADR format:
+
+```markdown
+# ADR-001: Topic Naming Convention
+
+**Status:** Accepted
+**Date:** 2024-01-15
+
+## Decision
+...
+
+## Rationale
+...
+
+## Alternatives rejected
+...
+
+## Consequences
+...
+```
+
+### Step 4 — Write your first executable check
+
+Create a Gherkin feature file in `features/<your-domain>/`:
+
+```bash
+mkdir -p features/kafka
+cp features/example/resource-naming.feature features/kafka/topic-naming.feature
+# Edit features/kafka/topic-naming.feature
+rm -r features/example/
+```
+
+Write step definitions in `features/steps/`:
+
+```python
+# features/steps/kafka_steps.py
+from behave import given, when, then
+from nomos.validators.topic import validate_topic_name  # if using built-in validators
+
+@given('the topic name "{name}"')
+def step_topic_name(context, name):
+    context.name = name
+
+@when("I validate the topic name")
+def step_validate(context):
+    # use built-in validator or your own
+    context.result = validate_topic_name(name, config.kafka.topic)
+
+@then("it should be valid")
+def step_valid(context):
+    assert context.result.valid, context.result.errors
+```
+
+See `examples/kafka/features/steps/validation_steps.py` for a complete working example.
+
+Mark a scenario `@enforced` only when its step definitions exist and pass locally. `@wip` documents aspirations.
+
+### Step 5 — Run checks locally
+
+```bash
+pip install behave
+
+# Run only enforced checks (what CI runs)
+GOVERNANCE_REPO_PATH=. behave features/ --tags=enforced
+
+# Run everything including wip (local exploration)
+GOVERNANCE_REPO_PATH=. behave features/ --no-skipped
+```
+
+### Step 6 — Add CI
 
 ```yaml
 # .github/workflows/governance.yml
-- name: Governance checks
-  run: |
-    pip install nomos behave
-    behave features/ --tags=enforced
-  env:
-    GOVERNANCE_REPO_PATH: ${{ github.workspace }}
+name: Governance checks
+on: [pull_request]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install nomos behave
+      - run: behave features/ --tags=enforced
+        env:
+          GOVERNANCE_REPO_PATH: ${{ github.workspace }}
 ```
 
 ---
 
-## Deploying a shared instance
+## Deploying a shared server (the delegation model)
 
-The platform team deploys one Nomos instance. All teams point their agents and pre-commit hooks at it.
+The platform team deploys **one** Nomos instance. All teams point their agents and hooks at it — nobody runs their own.
 
 ```bash
-# With a GitHub governance repo (recommended for shared deployment)
+# GitHub mode — governance repo on GitHub, server reads it directly
 export GOVERNANCE_REPO_URL=https://github.com/your-org/my-governance
 export GITHUB_TOKEN=ghp_...
-docker compose up -d   # see docker-compose.yml in the nomos package
+docker compose up -d   # docker-compose.yml is in the nomos package repo
 ```
 
-Teams configure their agents:
+Teams configure their AI agents (one line per project):
 
 ```json
 {
@@ -110,44 +203,55 @@ Teams configure their agents:
 }
 ```
 
-Pre-commit hooks delegate to the shared server:
+Pre-commit hooks validate without local files:
 
 ```bash
-nomos-validate --server https://governance.yourcompany.com topic your.topic.name
+nomos-validate --server https://governance.yourcompany.com topic your.topic.name.v1
 ```
 
 ---
 
 ## Reference implementations
 
-See `examples/` for complete governance setups:
+Working governance setups you can copy and adapt:
 
-| Example | What it shows |
-|---|---|
-| [`examples/kafka/`](examples/kafka/) | Kafka topic naming, RBAC, service accounts, Camel, SpringBoot, Helm |
-| [`examples/rest-api/`](examples/rest-api/) | REST API URL structure, versioning, error format |
+| Example | Domains covered | Status |
+|---|---|---|
+| [`examples/kafka/`](examples/kafka/) | Kafka topics, RBAC, service accounts, Camel, SpringBoot, Helm | Validators + Gherkin |
+| [`examples/rest-api/`](examples/rest-api/) | URL structure, versioning, error format | Gherkin only |
 
-Copy the folder for your domain and adapt it. Delete what you don't need.
+To use an example as your starting point:
+
+```bash
+# Use the Kafka example directly
+nomos --repo examples/kafka
+
+# Or copy it and customize
+cp -r examples/kafka /path/to/my-governance
+nomos --repo /path/to/my-governance
+```
 
 ---
 
-## The delegation model
+## Repository structure Nomos expects
 
 ```
-this repo (your governance rules)
-        │
-        ▼
-  nomos --repo .   or   GOVERNANCE_REPO_URL=github.com/your-org/my-governance
-        │
-  Nomos server (one instance, operated by platform team)
-        │
-   ┌────┴────────────┐
-   ▼                 ▼
-AI Agents       CI Pipeline
-(MCP tools)   (nomos-validate)
+your-governance-repo/
+├── governance.yml          ← required: drives validators
+├── constitution.md         ← optional: global principles
+├── constitutions/
+│   └── <domain>.md         ← optional: per-domain principles
+├── adrs/
+│   └── global/
+│       └── NNN-title.md    ← optional: architectural decisions
+└── features/
+    ├── <domain>/
+    │   └── *.feature       ← optional: Gherkin checks
+    └── steps/
+        └── *_steps.py      ← required if features/ has @enforced scenarios
 ```
 
-One governance repo. One server. Every team, agent, and pipeline delegates to it.
+Only `governance.yml` is strictly required. Everything else is optional but recommended.
 
 ---
 
