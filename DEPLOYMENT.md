@@ -84,6 +84,17 @@ This tells Claude Code (or any MCP-compatible agent) where the governance server
 
 ```bash
 # In your project repo (not the governance repo)
+pip install nomos
+nomos install-hooks --server https://governance.yourcompany.com
+```
+
+This creates `.mcp.json` and installs the pre-commit hook (see Part 3) in one step.
+
+Commit `.mcp.json`. Every engineer who clones the project gets governance automatically.
+
+**Or manually**, if you prefer not to install Nomos locally:
+
+```bash
 cat > .mcp.json << 'EOF'
 {
   "mcpServers": {
@@ -95,8 +106,6 @@ cat > .mcp.json << 'EOF'
 }
 EOF
 ```
-
-Commit this file. Every engineer who clones the project gets governance automatically.
 
 ### What the agent can now do
 
@@ -121,25 +130,30 @@ Pre-commit hooks validate resources locally before they reach CI. They call the 
 
 ### Install the hook
 
-In each project repo:
+If you ran `nomos install-hooks` in Part 2, the hook is already installed. Skip to "Customise the hook" below.
+
+Otherwise:
 
 ```bash
-# .git/hooks/pre-commit
-#!/bin/sh
-set -e
-NOMOS_SERVER="https://governance.yourcompany.com"
+nomos install-hooks --server https://governance.yourcompany.com
+```
 
-# Validate any topic names found in staged HCL files
-git diff --cached --name-only | grep '\.hcl$' | while read file; do
-  grep -o '"[a-z][a-z0-9.]*\.[a-z][a-z0-9.]*"' "$file" | tr -d '"' | while read name; do
-    nomos-validate --server "$NOMOS_SERVER" topic "$name"
-  done
+This installs `.git/hooks/pre-commit` (executable) and `.mcp.json` in the current directory.
+
+### Customise the hook
+
+The installed hook is a template. Open `.git/hooks/pre-commit` and uncomment the validation sections that apply to your project:
+
+```bash
+# Example: validate topic names found in staged HCL files
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep "topics\.hcl" || true)
+for f in $STAGED; do
+  # Extract topic keys and pass to nomos-validate
+  nomos-validate --server "$NOMOS_SERVER" topic <extracted-name>
 done
 ```
 
-```bash
-chmod +x .git/hooks/pre-commit
-```
+Adapt the extraction logic to your HCL structure. The hook template includes commented examples for topics, SAs, and RBAC.
 
 ### Or use pre-commit framework
 

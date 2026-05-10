@@ -86,7 +86,19 @@ See `examples/kafka/governance.yml` for a complete Kafka configuration.
 
 Replace `constitution.md` with your platform's non-negotiable principles — the rules that apply everywhere, regardless of team or domain.
 
-Add per-domain constitutions in `constitutions/`:
+For each domain, scaffold the required files in one command:
+
+```bash
+nomos scaffold domain kafka
+# Creates:
+#   constitutions/kafka.md
+#   adrs/kafka/001-resource-naming.md
+#   features/kafka/kafka-conventions.feature  (@wip)
+```
+
+Then edit the generated files — each contains a template with TODO markers.
+
+**Or manually:**
 
 ```bash
 cp constitutions/example.md constitutions/kafka.md
@@ -96,9 +108,7 @@ rm constitutions/example.md
 
 ### Step 3 — Record your first ADR
 
-Replace `adrs/global/001-resource-naming.md` with your first real architectural decision. Every naming convention should have an ADR explaining why it exists.
-
-The ADR format:
+`nomos scaffold domain` creates a first ADR template at `adrs/<domain>/001-resource-naming.md`. Fill it in:
 
 ```markdown
 # ADR-001: Topic Naming Convention
@@ -119,16 +129,17 @@ The ADR format:
 ...
 ```
 
+Every naming convention should have an ADR explaining why it exists.
+
 ### Step 4 — Write your first executable check
 
-Create a Gherkin feature file in `features/<your-domain>/`:
+`nomos scaffold domain` creates a `@wip` feature file at `features/<domain>/<domain>-conventions.feature`. Edit the scenarios, add step definitions in `features/steps/`, then verify:
 
 ```bash
-mkdir -p features/kafka
-cp features/example/resource-naming.feature features/kafka/topic-naming.feature
-# Edit features/kafka/topic-naming.feature
-rm -r features/example/
+nomos check-promotion features/kafka/kafka-conventions.feature --run
 ```
+
+When it passes, change `@wip` to `@enforced` and open a promotion PR.
 
 Write step definitions in `features/steps/`:
 

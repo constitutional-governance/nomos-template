@@ -143,12 +143,14 @@ Promoting from one to the other is a deliberate step — not automatic.
 
 2. **Run locally and confirm it passes**
    ```bash
-   GOVERNANCE_REPO_PATH=. behave features/<domain>/<scenario>.feature --no-skipped
+   nomos check-promotion features/<domain>/<scenario>.feature --run
    ```
+   This verifies step definitions exist and runs the full scenario suite.
+   Include the output in the PR description.
 
 3. **Open a promotion PR**
    - Change `@wip` to `@enforced` in the feature file
-   - Include the `behave` output in the PR description
+   - Include the `nomos check-promotion` output in the PR description
 
 4. **Domain owner approves** — one approval is sufficient for a promotion-only PR
    (no new rule is being introduced, only enforcement is being activated)
