@@ -38,6 +38,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install dependencies
+        run: pip install openai
+
       - name: Get changed constitution files
         id: changed
         run: |

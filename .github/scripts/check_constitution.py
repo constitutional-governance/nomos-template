@@ -32,6 +32,8 @@ import sys
 import urllib.request
 from pathlib import Path
 
+from openai import OpenAI
+
 _DEFAULT_BASE_URL = "https://models.inference.ai.azure.com"
 _DEFAULT_MODEL = "gpt-4o"
 
@@ -73,18 +75,18 @@ SUMMARY: <one sentence>
 """
 
 
-def _llm_config() -> tuple[str, str, str]:
+def _client() -> tuple[OpenAI, str]:
     base_url = os.environ.get("LLM_BASE_URL", _DEFAULT_BASE_URL).rstrip("/")
     api_key = os.environ.get("LLM_API_KEY") or os.environ["GITHUB_TOKEN"]
     model = os.environ.get("LLM_MODEL", _DEFAULT_MODEL)
-    return base_url, api_key, model
+    return OpenAI(base_url=base_url, api_key=api_key), model
 
 
 def call_model(domain: str, team: str, domain_content: str, team_content: str) -> str:
-    base_url, api_key, model = _llm_config()
-    payload = {
-        "model": model,
-        "messages": [
+    client, model = _client()
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
             {
                 "role": "user",
@@ -96,19 +98,10 @@ def call_model(domain: str, team: str, domain_content: str, team_content: str) -
                 ),
             },
         ],
-        "temperature": 0,
-        "max_tokens": 600,
-    }
-    req = urllib.request.Request(
-        f"{base_url}/chat/completions",
-        data=json.dumps(payload).encode(),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
+        temperature=0,
+        max_tokens=600,
     )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read())["choices"][0]["message"]["content"]
+    return response.choices[0].message.content
 
 
 def parse_verdict(result: str) -> str:
@@ -148,7 +141,8 @@ def main() -> int:
         print("No constitution files to check.")
         return 0
 
-    base_url, _, model = _llm_config()
+    _, model = _client()
+    base_url = os.environ.get("LLM_BASE_URL", _DEFAULT_BASE_URL)
     print(f"LLM: {model} @ {base_url}")
 
     sections: list[str] = ["## Constitution contradiction check\n"]
