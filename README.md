@@ -14,6 +14,8 @@ nomos --repo .
 | This file | Everyone — quick start and structure overview |
 | [FOR-TEAMS.md](FOR-TEAMS.md) | Product teams — day-to-day workflow, synergies, proposing rules |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Platform team — shared server setup, webhook, pre-commit, CI |
+| [GOVERNANCE-PROCESS.md](GOVERNANCE-PROCESS.md) | Platform team — how to propose, review, and approve governance changes |
+| [CHANGELOG.md](CHANGELOG.md) | Everyone — history of rule changes and migration notes |
 
 ---
 
