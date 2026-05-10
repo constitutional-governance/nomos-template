@@ -1,0 +1,29 @@
+# CODEOWNERS — governance repository
+#
+# The platform team owns everything by default.
+# Each team owns their governance subdirectory and can merge changes
+# to it without platform team approval.
+#
+# Replace @your-org/platform-team and team handles with your actual GitHub teams.
+
+# Default: platform team reviews everything
+*                              @your-org/platform-team
+
+# Global constitution and governance.yml — broad consensus required
+constitution.md                @your-org/platform-team
+governance.yml                 @your-org/platform-team
+GOVERNANCE-PROCESS.md          @your-org/platform-team
+
+# Domain ownership — update when adding a new domain
+constitutions/kafka.md         @your-org/kafka-team
+constitutions/camel.md         @your-org/camel-team
+adrs/kafka/                    @your-org/kafka-team
+adrs/camel/                    @your-org/camel-team
+features/kafka/                @your-org/kafka-team
+features/camel/                @your-org/camel-team
+
+# Team governance — each team owns their subdirectory
+# Add one line per team:
+teams/example-team/            @your-org/example-team
+# teams/team-payments/         @your-org/team-payments
+# teams/team-pos/              @your-org/team-pos
