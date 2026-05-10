@@ -9,6 +9,12 @@ pip install nomos
 nomos --repo .
 ```
 
+| Document | Audience |
+|---|---|
+| This file | Everyone — quick start and structure overview |
+| [FOR-TEAMS.md](FOR-TEAMS.md) | Product teams — day-to-day workflow, synergies, proposing rules |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Platform team — shared server setup, webhook, pre-commit, CI |
+
 ---
 
 ## Five-minute start
