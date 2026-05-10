@@ -34,8 +34,8 @@ nomos --repo .
 # → listening on http://127.0.0.1:8080
 
 # 4. Connect Claude Code (or any MCP-compatible agent)
-# Add .mcp.json to your project:
-echo '{"mcpServers":{"nomos":{"type":"http","url":"http://127.0.0.1:8080/mcp"}}}' > .mcp.json
+# In your project repo (not this governance repo):
+nomos install-hooks --server http://127.0.0.1:8080
 ```
 
 The server works immediately with the template content. Customize it to make it yours.

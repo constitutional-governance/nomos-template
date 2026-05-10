@@ -1,0 +1,66 @@
+name: Governance checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  gherkin:
+    name: Enforced Gherkin checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install nomos behave
+
+      - name: Run enforced checks
+        run: behave features/ --tags=enforced --no-skipped
+        env:
+          GOVERNANCE_REPO_PATH: ${{ github.workspace }}
+
+  adr-format:
+    name: ADR format validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check ADR filenames follow NNN-title.md convention
+        run: |
+          find adrs/ -name "*.md" | while read f; do
+            base=$(basename "$f")
+            if ! echo "$base" | grep -qE '^[0-9]{3}-.+\.md$'; then
+              echo "ERR  $f — filename must match NNN-title.md (e.g. 001-topic-naming.md)"
+              exit 1
+            fi
+          done
+          echo "OK   all ADR filenames valid"
+
+      - name: Check required ADR fields
+        run: |
+          find adrs/ -name "*.md" | while read f; do
+            for field in "**Status:**" "**Date:**" "## Decision" "## Rationale"; do
+              if ! grep -q "$field" "$f"; then
+                echo "ERR  $f — missing required field: $field"
+                exit 1
+              fi
+            done
+          done
+          echo "OK   all ADR fields present"
+
+      - name: Check ADR Status values
+        run: |
+          find adrs/ -name "*.md" | while read f; do
+            status=$(grep "^\*\*Status:\*\*" "$f" | head -1 | sed 's/\*\*Status:\*\* *//')
+            case "$status" in
+              Proposed|Accepted|Superseded|Deprecated) ;;
+              *) echo "ERR  $f — invalid Status '$status' (must be Proposed, Accepted, Superseded, or Deprecated)"; exit 1 ;;
+            esac
+          done
+          echo "OK   all ADR Status values valid"
