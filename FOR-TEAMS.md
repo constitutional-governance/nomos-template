@@ -193,22 +193,29 @@ This is the full flow of a governance rule — from proposal to enforcement acro
 
 ```mermaid
 flowchart TD
-    NEED["Team identifies a need\ne.g. inconsistent naming across repos"]
-    PR["Opens PR on governance repo\nADR + governance.yml change + Gherkin scenario"]
-    REVIEW["Platform team reviews\nDiscussion · Amendment · Approval"]
+    NEED["Team identifies a need"]
+    SCOPE{"Applies to\nall teams?"}
+
+    PR_DOM["PR to governance repo\nADR + governance.yml + Gherkin"]
+    PR_TEAM["PR to teams/<name>/\nconstitution addendum or team check"]
+
+    REVIEW["Domain owner reviews"]
+    AUTO["Contradiction check\nGitHub Action — LLM advisory"]
+
     MERGE["Merged to main"]
-    WEBHOOK["GitHub webhook fires\nNomos cache invalidated"]
-    SERVER["Nomos server serves updated rules"]
+    WEBHOOK["Webhook fires\nNomos cache invalidated"]
+    SERVER["Nomos serves updated rules"]
 
-    A1["Team A agent\ngets new rules on next query"]
-    A2["Team B agent\ngets new rules on next query"]
-    PC["Pre-commit hooks\nvalidate against new rules"]
-    CI["CI pipelines\nrun updated @enforced checks"]
+    A1["Team A agent"]
+    A2["Team B agent"]
+    CI["CI pipelines"]
 
-    NEED --> PR --> REVIEW --> MERGE --> WEBHOOK --> SERVER
+    NEED --> SCOPE
+    SCOPE -->|"yes"| PR_DOM --> REVIEW --> MERGE
+    SCOPE -->|"no — team only"| PR_TEAM --> AUTO --> MERGE
+    MERGE --> WEBHOOK --> SERVER
     SERVER --> A1
     SERVER --> A2
-    SERVER --> PC
     SERVER --> CI
 ```
 
@@ -219,18 +226,22 @@ No team needs to pull, restart, or reconfigure anything.
 
 ```mermaid
 flowchart LR
-    GT["Governance Repository\nPlatform team maintains"]
-    NS["Nomos Server\nOne shared instance"]
+    GT["Governance Repository\nplatform + domain rules"]
+    TG["teams/<name>/\nteam-owned addenda"]
+    NS["Nomos Server\none shared instance"]
     TA["Your team\nAI agent + pre-commit + CI"]
 
-    GT -->|"rules as code\n(ADRs · governance.yml · Gherkin)"| NS
-    NS -->|"MCP tools\nREST validation"| TA
-    TA -->|"propose rules\n(PR to governance repo)"| GT
+    GT -->|"domain rules"| NS
+    TG -->|"team addenda"| NS
+    NS -->|"/mcp — domain rules"| TA
+    NS -->|"/teams/<name>/mcp\nmerged rules"| TA
+    TA -->|"propose domain rules\n(PR to governance repo)"| GT
+    TA -->|"add team rules\n(PR to teams/<name>/)"| TG
 ```
 
-Your team is both a **consumer** of governance (you get rules) and a **contributor**
-(you propose new rules via PR). The platform team is the authority, but governance
-is not imposed — it is co-designed through pull requests.
+Your team is both a **consumer** of governance (you get merged rules at your team endpoint)
+and a **contributor** at two levels: domain rules via PR to the platform team, and
+team-specific rules via PR to your own `teams/<name>/` directory.
 
 ---
 
