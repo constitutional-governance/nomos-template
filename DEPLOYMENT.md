@@ -225,6 +225,57 @@ Add `NOMOS_SERVER` as a repository variable in GitHub Settings → Variables.
 
 ---
 
+## Part 5 — Team-scoped governance
+
+Teams that need rules specific to their resources — too niche for a domain constitution —
+can add a `teams/<name>/` directory to the governance repo. The Nomos server merges
+team content on top of domain content when serving the team's endpoint.
+
+### For the platform team: scaffold and CODEOWNERS
+
+```bash
+# In the governance repo
+nomos scaffold team team-pos
+```
+
+Creates `teams/team-pos/constitutions/`, `adrs/`, and `features/` with README templates.
+
+Then add the team to `.github/CODEOWNERS`:
+
+```
+teams/team-pos/  @your-org/team-pos
+```
+
+The team can now merge changes to their directory without platform team approval.
+
+### For the team: connect your agent
+
+```bash
+# In the team's project repo
+nomos install-hooks --server https://governance.yourcompany.com --team team-pos
+```
+
+This creates `.mcp.json` pointing at `/teams/team-pos/mcp`. Every governance query
+from the team's agent returns domain + team rules merged — no extra steps needed.
+
+### What the team endpoint serves
+
+| Query | Response |
+|---|---|
+| `get_constitution("kafka")` | Domain kafka constitution + team addendum (if exists) |
+| `list_adrs()` | Domain ADRs + team ADRs |
+| `get_checks("kafka")` | Domain checks + team checks |
+| `get_active_rules()` | Always domain `governance.yml` — teams cannot override |
+
+### Automated contradiction check
+
+Any PR that modifies `teams/*/constitutions/*.md` triggers an LLM-based review
+that compares the team addendum against the domain constitution and posts findings
+in the PR. See [GOVERNANCE-PROCESS.md](GOVERNANCE-PROCESS.md#team-scoped-governance)
+for configuration and verdict meanings.
+
+---
+
 ## Architecture summary
 
 ```

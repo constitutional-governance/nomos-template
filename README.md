@@ -57,12 +57,17 @@ nomos-template/
 │   │   └── resource-naming.feature  ← REPLACE: your first Gherkin check
 │   └── steps/
 │       └── README.md       ← READ: how to write step definitions
+├── teams/                  ← OPTIONAL: team-scoped governance addenda
+│   └── example-team/       ← one directory per team (see GOVERNANCE-PROCESS.md)
+│       ├── constitutions/  ← domain constitution addenda (appended by Nomos)
+│       ├── adrs/           ← team-scoped architectural decisions
+│       └── features/       ← team-specific @enforced checks
 └── examples/               ← REFERENCE: copy and adapt, do not edit directly
     ├── kafka/              ← complete Kafka platform governance
     └── rest-api/           ← complete REST API governance
 ```
 
-**The short version:** edit the files at the root level. Use `examples/` as reference. Delete placeholder files once you've replaced them.
+**The short version:** edit the files at the root level. Use `examples/` as reference. Delete placeholder files once you've replaced them. Add `teams/<name>/` when a team needs rules that are too specific for a domain constitution.
 
 ---
 

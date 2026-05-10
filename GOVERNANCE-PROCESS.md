@@ -167,6 +167,79 @@ The platform team is responsible for maintaining the step definitions in
 
 ---
 
+## Team-scoped governance
+
+Some teams need rules that apply only to their resources and are too specific to belong
+in a domain constitution. Team-scoped governance provides a way to add constraints
+without polluting the domain.
+
+### What teams can do
+
+| Allowed | Not allowed |
+|---|---|
+| Add a domain constitution addendum (`teams/<name>/constitutions/<domain>.md`) | Override or relax domain rules |
+| Add team-specific ADRs (`teams/<name>/adrs/`) | Modify `governance.yml` |
+| Add team-specific Gherkin checks (`teams/<name>/features/`) | Disable domain `@enforced` checks |
+| Promote team checks from `@wip` to `@enforced` | Contradict the domain or global constitution |
+
+The Nomos server always loads domain rules first. Team content is additive — it is
+appended or extended on top, never instead of.
+
+### Setting up team governance
+
+```bash
+# 1. Scaffold the team directory in the governance repo
+nomos scaffold team team-pos
+
+# 2. Add the team to .github/CODEOWNERS
+#    teams/team-pos/  @your-org/team-pos
+
+# 3. Connect the team's AI agent to the team-scoped endpoint
+nomos install-hooks --server https://governance.acme.com --team team-pos
+```
+
+The team's `.mcp.json` points to `/teams/team-pos/mcp`. Every governance query from
+their agent automatically returns merged domain + team rules.
+
+### CODEOWNERS and autonomy
+
+Each team owns their `teams/<name>/` directory via CODEOWNERS. They can merge changes
+to it without platform team or domain owner approval. The platform team is notified
+but not a required reviewer.
+
+This is intentional: team-scoped governance is the team's responsibility. If a team
+introduces a rule that contradicts the domain, the automated check below flags it.
+
+### Automated contradiction detection
+
+Every PR that modifies `teams/*/constitutions/*.md` triggers the
+**constitution contradiction check** (`.github/workflows/constitution-review.yml`).
+
+The check calls an LLM to compare the team addendum against the domain constitution
+and posts findings in the PR:
+
+| Verdict | Meaning | Action required |
+|---|---|---|
+| ✅ OK | No contradictions detected | None — proceed with merge |
+| ⚠️ WARNING | Potential ambiguity or implicit relaxation | Domain owner should review before merging |
+| 🚫 BLOCKER | Direct contradiction or relaxation of a domain rule | Fix the addendum before merging |
+
+The check is **advisory** — it never blocks the merge automatically. The domain owner
+has the final call. A BLOCKER verdict marks the PR check as failed (visible in GitHub)
+but does not prevent merge.
+
+**LLM configuration** (repo/org Settings → Variables and Secrets):
+
+| Variable | Default | Example override |
+|---|---|---|
+| `LLM_BASE_URL` | GitHub Models | `https://api.anthropic.com/v1/` |
+| `LLM_MODEL` | `gpt-4o` | `claude-sonnet-4-6` |
+| `LLM_API_KEY` (secret) | `GITHUB_TOKEN` | `$ANTHROPIC_API_KEY` |
+
+No configuration needed to use the default (GitHub Models, no extra secrets).
+
+---
+
 ## Conflict resolution
 
 When two proposals are in conflict (e.g., Team A proposes prefix `orders` and
