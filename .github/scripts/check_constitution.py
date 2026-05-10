@@ -2,8 +2,29 @@
 Constitution contradiction checker — called by the constitution-review workflow.
 
 For each changed teams/<team>/constitutions/<domain>.md file, reads the
-corresponding domain constitution, calls GitHub Models, and posts a PR comment
+corresponding domain constitution, calls an LLM, and posts a PR comment
 with findings classified as BLOCKER / WARNING / OK.
+
+LLM configuration (via environment variables):
+  LLM_BASE_URL   OpenAI-compatible endpoint (default: GitHub Models)
+  LLM_API_KEY    API key — defaults to GITHUB_TOKEN if not set
+  LLM_MODEL      Model name (default: gpt-4o)
+
+Examples:
+  # GitHub Models (default — no extra secrets needed)
+  LLM_BASE_URL=https://models.inference.ai.azure.com
+  LLM_API_KEY=$GITHUB_TOKEN
+  LLM_MODEL=gpt-4o
+
+  # Anthropic (OpenAI-compatible endpoint)
+  LLM_BASE_URL=https://api.anthropic.com/v1/
+  LLM_API_KEY=$ANTHROPIC_API_KEY
+  LLM_MODEL=claude-sonnet-4-6
+
+  # Azure OpenAI
+  LLM_BASE_URL=https://<resource>.openai.azure.com/openai/deployments/<deployment>
+  LLM_API_KEY=$AZURE_OPENAI_KEY
+  LLM_MODEL=gpt-4o
 """
 import json
 import os
@@ -11,8 +32,8 @@ import sys
 import urllib.request
 from pathlib import Path
 
-GITHUB_MODELS_URL = "https://models.inference.ai.azure.com"
-MODEL = "gpt-4o"
+_DEFAULT_BASE_URL = "https://models.inference.ai.azure.com"
+_DEFAULT_MODEL = "gpt-4o"
 
 _SYSTEM_PROMPT = """\
 You are a governance reviewer. Your job is to detect contradictions between a
@@ -52,10 +73,17 @@ SUMMARY: <one sentence>
 """
 
 
+def _llm_config() -> tuple[str, str, str]:
+    base_url = os.environ.get("LLM_BASE_URL", _DEFAULT_BASE_URL).rstrip("/")
+    api_key = os.environ.get("LLM_API_KEY") or os.environ["GITHUB_TOKEN"]
+    model = os.environ.get("LLM_MODEL", _DEFAULT_MODEL)
+    return base_url, api_key, model
+
+
 def call_model(domain: str, team: str, domain_content: str, team_content: str) -> str:
-    token = os.environ["GITHUB_TOKEN"]
+    base_url, api_key, model = _llm_config()
     payload = {
-        "model": MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {
@@ -72,10 +100,10 @@ def call_model(domain: str, team: str, domain_content: str, team_content: str) -
         "max_tokens": 600,
     }
     req = urllib.request.Request(
-        f"{GITHUB_MODELS_URL}/chat/completions",
+        f"{base_url}/chat/completions",
         data=json.dumps(payload).encode(),
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
     )
@@ -96,9 +124,8 @@ def post_pr_comment(body: str) -> None:
     token = os.environ["GITHUB_TOKEN"]
     repo = os.environ["GITHUB_REPOSITORY"]
     pr = os.environ["PR_NUMBER"]
-    url = f"https://api.github.com/repos/{repo}/issues/{pr}/comments"
     req = urllib.request.Request(
-        url,
+        f"https://api.github.com/repos/{repo}/issues/{pr}/comments",
         data=json.dumps({"body": body}).encode(),
         headers={
             "Authorization": f"Bearer {token}",
@@ -121,6 +148,9 @@ def main() -> int:
         print("No constitution files to check.")
         return 0
 
+    base_url, _, model = _llm_config()
+    print(f"LLM: {model} @ {base_url}")
+
     sections: list[str] = ["## Constitution contradiction check\n"]
     has_blocker = False
 
@@ -132,7 +162,6 @@ def main() -> int:
 
         team = parts[1]
         domain = parts[3].removesuffix(".md")
-
         print(f"Checking {file_path} (team={team}, domain={domain})...")
 
         team_content = Path(file_path).read_text()
@@ -160,13 +189,10 @@ def main() -> int:
 
     sections.append(
         "---\n"
-        "*Advisory only — the domain owner makes the final call.*  \n"
-        "*Powered by [GitHub Models](https://github.com/marketplace/models).*"
+        "*Advisory only — the domain owner makes the final call.*"
     )
 
     post_pr_comment("\n".join(sections))
-
-    # Exit 1 on BLOCKER so the check shows as failed in the PR (non-blocking by default)
     return 1 if has_blocker else 0
 
 

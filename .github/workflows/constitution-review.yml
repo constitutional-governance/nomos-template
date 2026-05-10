@@ -1,5 +1,19 @@
 name: Constitution contradiction check
 
+# Triggers on any PR that adds or modifies a team constitution addendum.
+# Calls an LLM to detect contradictions against the domain constitution
+# and posts findings as a PR comment.
+#
+# LLM configuration — set these in repo/org variables or secrets:
+#   LLM_BASE_URL  (variable)  OpenAI-compatible endpoint
+#   LLM_MODEL     (variable)  Model name
+#   LLM_API_KEY   (secret)    API key — leave unset to use GITHUB_TOKEN (GitHub Models default)
+#
+# Default: GitHub Models (gpt-4o) — no secrets needed.
+# To switch provider, set the variables above. Examples:
+#   Anthropic:   LLM_BASE_URL=https://api.anthropic.com/v1/  LLM_MODEL=claude-sonnet-4-6  LLM_API_KEY=<secret>
+#   Azure OpenAI: LLM_BASE_URL=https://<resource>.openai.azure.com/...  LLM_MODEL=gpt-4o  LLM_API_KEY=<secret>
+
 on:
   pull_request:
     paths:
@@ -41,6 +55,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
         continue-on-error: true
-        # continue-on-error: the check posts a comment and exits 1 on BLOCKER,
-        # but never prevents merge — the domain owner has the final say.
+        # continue-on-error: exits 1 on BLOCKER (visible in PR checks)
+        # but never blocks merge — the domain owner has the final say.
