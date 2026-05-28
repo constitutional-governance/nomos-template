@@ -46,6 +46,14 @@ GOVERNANCE_REPO_URL=https://github.com/your-org/your-governance-repo
 GITHUB_TOKEN=ghp_...
 GITHUB_BRANCH=main
 CACHE_TTL_SECONDS=300
+
+# Behaviour when the governance repo cannot be reached:
+#   fail (default) — every MCP tool and REST endpoint returns an error (safe for production)
+#   warn           — logs a warning, returns empty config; all validators pass (advisory/dev)
+NOMOS_ON_UNAVAILABLE=fail
+
+# Required only if you use POST /webhook/incident (Incident-to-Eval Synthesis):
+# NOMOS_REPO_PATH=your-org/your-governance-repo
 ```
 
 Run with Docker Compose — copy `docker-compose.yml` from this template:
@@ -74,6 +82,37 @@ In your governance repo on GitHub:
 5. Active: ✓
 
 When a rule changes and is pushed to `main`, the webhook fires, Nomos invalidates its cache, and the next request sees the updated rules.
+
+### Set up the incident webhook (optional — Incident-to-Eval Synthesis)
+
+When a governance violation reaches production, `POST /webhook/incident` converts it into a pull request against the governance repo adding an entry to `knowledge/failures.md`. This closes the feedback loop: violations become training examples for the AI agent.
+
+Set `NOMOS_REPO_PATH` in your `.env`:
+
+```bash
+NOMOS_REPO_PATH=your-org/your-governance-repo
+```
+
+Call the endpoint from any CI failure step:
+
+```yaml
+- name: Report governance violation
+  if: failure()
+  run: |
+    curl -sX POST https://your-server:8080/webhook/incident \
+      -H "Content-Type: application/json" \
+      -d '{
+        "resource_name":   "raw.payments.checkout.v1",
+        "resource_type":   "kafka_topic",
+        "rule_violated":   "Topic must have exactly 7 dot-separated segments",
+        "bad_pattern":     "raw.payments.checkout.v1",
+        "correct_pattern": "raw.payments.pos.acme.checkout.receipt.v1"
+      }'
+```
+
+Nomos opens a PR against the governance repo. After review and merge, the new failure pattern is visible to the agent via `get_knowledge("failures")` — preventing the same mistake again.
+
+Requires `GITHUB_TOKEN` (already set) and `NOMOS_REPO_PATH`. Returns 503 if either is missing (fail-closed).
 
 ---
 
@@ -146,12 +185,16 @@ The installed hook is a template. Open `.git/hooks/pre-commit` and uncomment the
 
 ```bash
 # Example: validate topic names found in staged HCL files
+# Pass --team to apply canary rollout rules for your team
 STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep "topics\.hcl" || true)
 for f in $STAGED; do
   # Extract topic keys and pass to nomos-validate
-  nomos-validate --server "$NOMOS_SERVER" topic <extracted-name>
+  nomos-validate --server "$NOMOS_SERVER" --team "$NOMOS_TEAM" topic <extracted-name>
 done
 ```
+
+Set `NOMOS_TEAM` in the hook or as an env var to participate in canary rollouts.
+If omitted, any rule in `canary` phase will produce a warning instead of an error.
 
 Adapt the extraction logic to your HCL structure. The hook template includes commented examples for topics, SAs, and RBAC.
 
@@ -165,7 +208,7 @@ repos:
       - id: nomos-validate-topics
         name: Validate Kafka topic names
         language: system
-        entry: nomos-validate --server https://governance.yourcompany.com topic
+        entry: nomos-validate --server https://governance.yourcompany.com --team your-team topic
         files: \.hcl$
         pass_filenames: true
 ```
@@ -290,12 +333,12 @@ for configuration and verdict meanings.
               │  :8080         │
               └───────┬────────┘
                       │
-       ┌──────────────┼──────────────┐
-       ▼              ▼              ▼
-  /mcp endpoint   /validate/*    /webhook/github
-       │              │
-  AI Agents       nomos-validate
-  (.mcp.json)     (pre-commit · CI)
+       ┌──────────────┼──────────────┬──────────────┐
+       ▼              ▼              ▼              ▼
+  /mcp endpoint   /validate/*    /webhook/github  /webhook/incident
+       │              │                            │
+  AI Agents       nomos-validate              CI failure →
+  (.mcp.json)     (pre-commit · CI)           PR in governance repo
 ```
 
 One governance repo. One server. Every agent, hook, and pipeline delegates to it.

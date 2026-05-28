@@ -66,11 +66,16 @@ Without governance, your workflow is:
 
 With governance, your workflow is:
 1. Ask your agent to create the resource
-2. The agent queries the governance server, validates the name, generates valid config
-3. Submit a PR — the name is already correct
-4. CI confirms with `@enforced` Gherkin scenarios
+2. The agent queries the governance server: failures catalog first, then conventions, then constitution
+3. The agent generates the resource and self-validates via `validate_*` before returning
+4. If validation fails, the agent revises using the specific errors as context and validates again — one retry cycle, not a loop
+5. Submit a PR — the name is already correct
+6. CI confirms with `@enforced` Gherkin scenarios
 
 The review cycle for naming and configuration is eliminated. Reviewers focus on logic.
+
+**What the retry looks like in practice:**
+The agent generates `payments-svc`. Validation returns `{valid: false, errors: ["missing {capability} segment"]}`. The agent re-attempts with that error as context and produces `payments-checkout-svc`. Validates again — passes. The human never sees the failed attempt.
 
 ### Before starting any platform work
 
@@ -306,3 +311,13 @@ These are real queries your agent can make at any time:
 | What architectural decisions have been made? | `list_adrs()` |
 | What checks will CI run on my PR? | `get_checks("kafka")` |
 | What are the current validation rules? | `get_active_rules()` |
+
+---
+
+## If the governance server is unreachable
+
+Nomos fails closed by default. If the server is unreachable when your agent tries to query it, the agent workflow will stop rather than proceed without governance context.
+
+This is intentional. An agent generating resources without querying the spec is not a governed agent — it's back to the same situation as before governance was in place.
+
+If you see connection errors in your agent or pre-commit hook, check with your platform team — the server may be down or your `.mcp.json` may be pointing at the wrong endpoint. For production CI, a governance server unavailability will fail the check the same way a test failure would.

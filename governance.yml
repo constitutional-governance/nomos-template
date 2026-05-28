@@ -29,3 +29,22 @@ project:
 #     debug_suffix: "debug"
 
 # See examples/kafka/governance.yml for a complete Kafka configuration.
+
+# ── Canary rollout (optional) ──────────────────────────────────────────────────
+# Any rule section (kafka.topic, kafka.rbac, kafka.service_account,
+# kafka.schema_registry, rest_api, service) can carry a rollout block to
+# stage enforcement gradually:
+#
+#   kafka:
+#     topic:
+#       segment_count: 7
+#       prefixes: [raw, public, ...]
+#       rollout:
+#         phase: canary          # enforce only for listed teams
+#         teams:
+#           - payments           # canary teams get errors on violation
+#           - platform           # all other teams get warnings instead
+#
+# When phase is "stable" (or the rollout block is absent), the rule is
+# enforced for everyone — this is the default behaviour.
+# Switch to "stable" once the rollout is complete to enforce universally.

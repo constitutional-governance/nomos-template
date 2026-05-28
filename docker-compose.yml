@@ -20,6 +20,8 @@ services:
       CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-300}
       MCP_SERVER_HOST: 0.0.0.0
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # NOMOS_ON_UNAVAILABLE: fail   # fail (default) = error if repo unreachable; warn = empty config
+      # NOMOS_REPO_PATH: your-org/your-governance-repo   # required for /webhook/incident PRs
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
